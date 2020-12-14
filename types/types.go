@@ -3,7 +3,6 @@ package types
 import (
 	"fmt"
 	"math"
-	"os"
 
 	"github.com/veandco/go-sdl2/sdl"
 )
@@ -131,7 +130,7 @@ func BallCollision(balls []*Ball) {
 }
 
 // Update updates the ball position and controls collision.
-func (ball *Ball) Update(leftPaddle *Paddle, rightPaddle *Paddle) {
+func (ball *Ball) Update(leftPaddle *Paddle, rightPaddle *Paddle) int {
 
 	ball.Y += ball.YVelocity
 	ball.X += ball.XVelocity
@@ -140,13 +139,14 @@ func (ball *Ball) Update(leftPaddle *Paddle, rightPaddle *Paddle) {
 		ball.YVelocity = -ball.YVelocity
 	}
 
-	// if int(ball.X) < 0+ball.Radius || int(ball.X) > winWidth-ball.Radius {
-	// 	println("You lose!")
-	// 	os.Exit(0)
-	// }
+	if int(ball.X) < 0+ball.Radius {
+		println("Game Over!")
+		return 2
+	}
 
-	if int(ball.X) > 850 {
-		os.Exit(0)
+	if int(ball.X) > winWidth-ball.Radius {
+		println("Game Over!")
+		return 1
 	}
 
 	if ball.X < leftPaddle.X+float64(leftPaddle.Width/2)+float64(ball.Radius) {
@@ -164,6 +164,7 @@ func (ball *Ball) Update(leftPaddle *Paddle, rightPaddle *Paddle) {
 			ball.XVelocity = -ball.XVelocity
 		}
 	}
+	return 0
 }
 
 // Set updates the ball position.

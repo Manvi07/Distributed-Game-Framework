@@ -73,7 +73,14 @@ func game(client1 types.Client, client2 types.Client, kafkaInfo types.KafkaInfo)
 			go func(i int) {
 				defer wg.Done()
 				writeBallPosition(kafkaBallWriters[i], balls[i])
-				balls[i].Update(&player1, &player2)
+				val := balls[i].Update(&player1, &player2)
+				if val != 0 {
+					err := writeToStopGame(kafkaWriter, val)
+					if err != nil {
+						fmt.Println("Error occured while writing to stop game", err)
+					}
+					os.Exit(0)
+				}
 			}(i)
 		}
 		wg.Wait()
@@ -123,6 +130,11 @@ func createServer(serverPort string, kafka types.KafkaInfo) {
 func writeToStartGame(writer *kafka.Writer) error {
 	startGame := "Start Game!"
 	return kafkaUtils.PushKafkaMessage(context.Background(), writer, nil, []byte(startGame))
+}
+
+func writeToStopGame(writer *kafka.Writer, winner int) error {
+	stopGame := "Stop Game! Player " + strconv.Itoa(winner) + " won."
+	return kafkaUtils.PushKafkaMessage(context.Background(), writer, nil, []byte(stopGame))
 }
 
 func writeBallPosition(writer *kafka.Writer, ball *types.Ball) {

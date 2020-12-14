@@ -7,14 +7,15 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"strings"
 	"strconv"
+	"strings"
 
 	"./kafkaUtils"
 	"./pong"
 	"./types"
 	"github.com/segmentio/kafka-go"
 )
+
 const numberOfBalls = 2
 
 func writePlayerPosition(writer *kafka.Writer) error {
@@ -27,10 +28,10 @@ func game(client types.Client, kafkaInfo types.KafkaInfo, oppositeID string) {
 	kafkaUtils.CreateTopic(kafkaInfo.Address+":"+kafkaInfo.Port, client.ID+"_0")
 	kafkaWriter := kafkaUtils.GetKafkaWriter([]string{kafkaInfo.Address + ":" + kafkaInfo.Port}, client.ID, client.ID+"_0")
 	kafkaReaderServer := kafkaUtils.GetKafkaReader([]string{kafkaInfo.Address + ":" + kafkaInfo.Port}, client.ID, "server_0")
-	
+
 	var kafkaBallReaders [numberOfBalls]*kafka.Reader
-	for i:= 0; i < numberOfBalls; i++ {
-		kafkaBallReaders[i] = kafkaUtils.GetKafkaReader([]string{kafkaInfo.Address + ":" + kafkaInfo.Port}, client.ID, "ball_" + strconv.Itoa(i) + "_0")
+	for i := 0; i < numberOfBalls; i++ {
+		kafkaBallReaders[i] = kafkaUtils.GetKafkaReader([]string{kafkaInfo.Address + ":" + kafkaInfo.Port}, client.ID, "ball_"+strconv.Itoa(i)+"_0")
 		defer kafkaBallReaders[i].Close()
 	}
 
@@ -47,8 +48,17 @@ func game(client types.Client, kafkaInfo types.KafkaInfo, oppositeID string) {
 
 	value := m.Value
 	fmt.Printf("First message from server: %v/%v/%v: %s\n", m.Topic, m.Partition, m.Offset, string(value))
-
+	go stopGame(kafkaReaderServer)
 	pong.StartGame(client.ID == "1", kafkaWriter, kafkaReaderServer, kafkaReaderOpposition, kafkaBallReaders)
+}
+
+func stopGame(kafkaReaderServer *kafka.Reader) {
+	m, err := kafkaReaderServer.ReadMessage(context.Background())
+	if err != nil {
+		fmt.Printf("error while exiting: %s\n", err.Error())
+	}
+	fmt.Println(string(m.Value))
+	os.Exit(0)
 }
 
 func main() {
